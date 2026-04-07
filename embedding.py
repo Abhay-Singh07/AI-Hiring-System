@@ -1,7 +1,19 @@
 from sentence_transformers import SentenceTransformer, CrossEncoder
 import numpy as np
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+    return model
+
+
+def embed_text(texts):
+    model = get_model()
+    return model.encode(texts)
 
 
 def embed_text(texts):
