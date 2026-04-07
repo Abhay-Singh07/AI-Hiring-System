@@ -6,7 +6,5 @@ numpy
 groq
 rank-bm25
 
-torch==2.11.0+cpu
---extra-index-url https://download.pytorch.org/whl/cpu
-
+torch==2.11.0
 sentence-transformers
