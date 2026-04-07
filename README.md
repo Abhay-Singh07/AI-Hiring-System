@@ -42,14 +42,24 @@ Final Score =
 
 ## Features
 
-- Hybrid RAG (BM25 + embeddings)
-- Cross-encoder reranking
-- Structured LLM outputs (JSON enforced)
-- Multi-resume ranking
-- Explainable results (decision + reasoning)
-- Resume improvement feedback
-- Retrieval quality scoring
-- Logging for debugging and analysis
+## Features
+
+- Hybrid retrieval (BM25 + semantic embeddings)
+- Cross-encoder reranking for improved relevance
+- RAG-based resume evaluation
+- LLM-based candidate analysis (structured JSON output)
+- Hybrid scoring system:
+  - LLM score
+  - Skill match score
+  - Semantic similarity
+- Multi-resume ranking system
+- Retrieval quality evaluation
+- Explainable AI outputs:
+  - selection decision
+  - reasoning
+  - skill gap analysis
+  - resume feedback
+- Logging system for debugging and analysis
 
 
 ## Tech Stack
@@ -94,11 +104,14 @@ This project tries to solve that by:
 
 ##Future improvements
 
--Cross-encoder based reranking improvements
--Section-aware resume parsing
--Better evaluation metrics
--Deployment + multi-user support
--Candidate-side assistant (career guidance)
+## Future Improvements
+
+- Section-aware resume parsing (skills, experience, projects)
+- Better retrieval evaluation metrics (precision@k, recall@k)
+- Dynamic weighting instead of fixed scoring formula
+- Deployment with multi-user support
+- Candidate-side assistant (career guidance system)
+- Feedback loop to improve model performance over time
 
 ##Notes
 
