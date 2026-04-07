@@ -5,11 +5,13 @@
 
 fastapi
 uvicorn
-streamlit
-requests
 pypdf
 faiss-cpu
-sentence-transformers
-rank-bm25
 numpy
 groq
+rank-bm25
+
+torch==2.2.2+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+sentence-transformers
