@@ -8,6 +8,7 @@ from config import GROQ_API_KEY
 from groq import Groq
 import json
 import time
+import numpy as np
 
 client = Groq(api_key=GROQ_API_KEY)
 
@@ -25,6 +26,8 @@ async def analyze_resumes(files: list[UploadFile], job_description: str = Form(.
 
     cleaned_jd = clean_query(job_description)
     jd_vec = embed_text([job_description])[0]
+    if jd_vec is None or len(jd_vec) == 0:
+        jd_vec = np.zeros(384)
 
     for file in files:
 
