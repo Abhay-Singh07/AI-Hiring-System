@@ -9,6 +9,9 @@ from groq import Groq
 import json
 import time
 import numpy as np
+import os
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 client = Groq(api_key=GROQ_API_KEY)
 
