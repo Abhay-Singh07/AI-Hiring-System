@@ -1,42 +1,51 @@
-from sentence_transformers import SentenceTransformer, CrossEncoder
+import os
+import requests
 import numpy as np
 
-model = None
+HF_API_KEY = os.getenv("HF_API_KEY")
 
-def get_model():
-    global model
-    if model is None:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-    return model
+API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
 
-
-def embed_text(texts):
-    model = get_model()
-    return model.encode(texts)
+HEADERS = {
+    "Authorization": f"Bearer {HF_API_KEY}"
+}
 
 
 def embed_text(texts):
-    return model.encode(texts)
+    if isinstance(texts, str):
+        texts = [texts]
+
+    response = requests.post(
+        API_URL,
+        headers=HEADERS,
+        json={"inputs": texts}
+    )
+
+    if response.status_code != 200:
+        raise Exception(f"HF API Error: {response.text}")
+
+    embeddings = response.json()
+
+    return np.array(embeddings)
 
 
-def cosine_similarity(vec1, vec2):
-    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
+def rerank(query, chunks):
+    query_vec = embed_text([query])[0]
+    chunk_vecs = embed_text(chunks)
 
-# Cross-encoder model for reranking
-reranker_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-
-
-def rerank(query, documents):
-    pairs = [(query, doc) for doc in documents]
-    scores = reranker_model.predict(pairs)
+    scores = [
+        cosine_similarity(query_vec, chunk_vec)
+        for chunk_vec in chunk_vecs
+    ]
 
     ranked = sorted(
-        zip(documents, scores),
+        zip(chunks, scores),
         key=lambda x: x[1],
         reverse=True
     )
 
-    return [doc for doc, _ in ranked]
+    return [chunk for chunk, _ in ranked]
