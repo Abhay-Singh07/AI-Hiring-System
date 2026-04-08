@@ -5,6 +5,4 @@ faiss-cpu
 numpy
 groq
 rank-bm25
-
-torch==2.11.0
-sentence-transformers
+requests
