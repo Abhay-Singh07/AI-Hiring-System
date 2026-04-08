@@ -1,14 +1,15 @@
-import os
-import requests
 import numpy as np
 
-HF_API_KEY = os.getenv("HF_API_KEY")
+# Lazy-loaded model (avoids startup delay on deployment)
+_model = None
 
-API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
 
-HEADERS = {
-    "Authorization": f"Bearer {HF_API_KEY}"
-}
+def get_model():
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _model
 
 
 def embed_text(texts):
@@ -16,43 +17,49 @@ def embed_text(texts):
         if isinstance(texts, str):
             texts = [texts]
 
-        response = requests.post(
-            API_URL,
-            headers=HEADERS,
-            json={"inputs": texts}
-        )
+        model = get_model()
+        embeddings = model.encode(texts)
 
-        if response.status_code != 200:
-            print("HF API Error:", response.text)
-            return np.zeros((len(texts), 384))
-
-        embeddings = response.json()
         return np.array(embeddings)
 
     except Exception as e:
-        print("Embedding exception:", str(e))
+        print("Embedding error:", str(e))
         return np.zeros((len(texts), 384))
 
 
 def cosine_similarity(a, b):
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+    denom = (np.linalg.norm(a) * np.linalg.norm(b))
+    if denom == 0:
+        return 0.0
+    return float(np.dot(a, b) / denom)
 
 
 def rerank(query, chunks):
-    query_vec = embed_text([query])[0]
-    if np.linalg.norm(query_vec) == 0:
+    try:
+        if not chunks:
+            return []
+
+        query_vec = embed_text([query])[0]
+
+        # Safety check
+        if np.linalg.norm(query_vec) == 0:
+            return chunks
+
+        chunk_vecs = embed_text(chunks)
+
+        scores = [
+            cosine_similarity(query_vec, chunk_vec)
+            for chunk_vec in chunk_vecs
+        ]
+
+        ranked = sorted(
+            zip(chunks, scores),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        return [chunk for chunk, _ in ranked]
+
+    except Exception as e:
+        print("Rerank error:", str(e))
         return chunks
-    chunk_vecs = embed_text(chunks)
-
-    scores = [
-        cosine_similarity(query_vec, chunk_vec)
-        for chunk_vec in chunk_vecs
-    ]
-
-    ranked = sorted(
-        zip(chunks, scores),
-        key=lambda x: x[1],
-        reverse=True
-    )
-
-    return [chunk for chunk, _ in ranked]
