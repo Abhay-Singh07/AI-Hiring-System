@@ -12,21 +12,26 @@ HEADERS = {
 
 
 def embed_text(texts):
-    if isinstance(texts, str):
-        texts = [texts]
+    try:
+        if isinstance(texts, str):
+            texts = [texts]
 
-    response = requests.post(
-        API_URL,
-        headers=HEADERS,
-        json={"inputs": texts}
-    )
+        response = requests.post(
+            API_URL,
+            headers=HEADERS,
+            json={"inputs": texts}
+        )
 
-    if response.status_code != 200:
-        raise Exception(f"HF API Error: {response.text}")
+        if response.status_code != 200:
+            print("HF API Error:", response.text)
+            return np.zeros((len(texts), 384))
 
-    embeddings = response.json()
+        embeddings = response.json()
+        return np.array(embeddings)
 
-    return np.array(embeddings)
+    except Exception as e:
+        print("Embedding exception:", str(e))
+        return np.zeros((len(texts), 384))
 
 
 def cosine_similarity(a, b):
@@ -35,6 +40,8 @@ def cosine_similarity(a, b):
 
 def rerank(query, chunks):
     query_vec = embed_text([query])[0]
+    if np.linalg.norm(query_vec) == 0:
+        return chunks
     chunk_vecs = embed_text(chunks)
 
     scores = [
