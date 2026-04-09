@@ -7,3 +7,4 @@ groq
 rank-bm25
 scikit-learn
 cohere
+python-multipart
