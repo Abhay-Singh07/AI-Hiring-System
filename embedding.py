@@ -1,15 +1,8 @@
 import numpy as np
+import cohere
+import os
 
-# Lazy-loaded model (avoids startup delay on deployment)
-_model = None
-
-
-def get_model():
-    global _model
-    if _model is None:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model
+co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
 
 def embed_text(texts):
@@ -17,14 +10,19 @@ def embed_text(texts):
         if isinstance(texts, str):
             texts = [texts]
 
-        model = get_model()
-        embeddings = model.encode(texts)
+        response = co.embed(
+            texts=texts,
+            model="embed-english-v3.0",
+            input_type="search_document"
+        )
 
-        return np.array(embeddings)
+        embeddings = np.array(response.embeddings)
+
+        return embeddings
 
     except Exception as e:
         print("Embedding error:", str(e))
-        return np.zeros((len(texts), 384))
+        return np.zeros((len(texts), 1024))
 
 
 def cosine_similarity(a, b):
@@ -40,10 +38,6 @@ def rerank(query, chunks):
             return []
 
         query_vec = embed_text([query])[0]
-
-        # Safety check
-        if np.linalg.norm(query_vec) == 0:
-            return chunks
 
         chunk_vecs = embed_text(chunks)
 
