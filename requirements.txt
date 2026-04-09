@@ -8,3 +8,5 @@ rank-bm25
 scikit-learn
 cohere
 python-multipart
+fastapi==0.110.0
+uvicorn==0.29.0
