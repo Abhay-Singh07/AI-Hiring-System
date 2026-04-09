@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, Form
+from fastapi import FastAPI, UploadFile, Form, File
 from rag import load_pdf, chunk_text, VectorStore
 from prompts import ATS_PROMPT
 from embedding import embed_text, cosine_similarity, rerank
@@ -23,7 +23,7 @@ def clean_query(text):
 
 
 @app.post("/analyze")
-async def analyze_resumes(files: list[UploadFile], job_description: str = Form(...)):
+async def analyze_resumes(files: list[UploadFile]= File(...), job_description: str = Form(...)):
 
     results = []
 
