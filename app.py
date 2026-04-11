@@ -1,7 +1,11 @@
 from fastapi import FastAPI, UploadFile, Form, File
 from typing import List
 from rag import load_pdf, chunk_text, VectorStore
-from prompts import ATS_PROMPT
+from prompts import (
+    ATS_PROMPT,
+    RECRUITER_COPILOT_PROMPT,
+    CANDIDATE_COPILOT_PROMPT
+)
 from embedding import embed_text, cosine_similarity, rerank
 from evaluation import retrieval_score
 from logger import log_entry
@@ -23,6 +27,9 @@ def clean_query(text):
     return " ".join(text.lower().split())
 
 
+
+#  Resume Analysis Endpoint
+
 @app.post("/analyze")
 async def analyze_resumes(
     files: List[UploadFile] = File(...),
@@ -31,7 +38,9 @@ async def analyze_resumes(
     results = []
 
     cleaned_jd = clean_query(job_description)
+
     jd_vec = embed_text([job_description])[0]
+
     if jd_vec is None or len(jd_vec) == 0:
         jd_vec = np.zeros(384)
 
@@ -44,15 +53,25 @@ async def analyze_resumes(
 
         vector_store.build(chunks)
 
-        retrieved = vector_store.query(cleaned_jd, k=8, alpha=0.6)
+        retrieved = vector_store.query(
+            cleaned_jd,
+            k=8,
+            alpha=0.6
+        )
 
         if not retrieved:
             continue
 
         reranked = rerank(cleaned_jd, retrieved)
+
         top_chunks = reranked[:4]
+
         context = "\n".join(top_chunks)
-        retrieval_quality = retrieval_score(cleaned_jd, top_chunks)
+
+        retrieval_quality = retrieval_score(
+            cleaned_jd,
+            top_chunks
+        )
 
         prompt = ATS_PROMPT.format(
             resume_context=context,
@@ -64,8 +83,14 @@ async def analyze_resumes(
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Return ONLY valid JSON."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "Return ONLY valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ],
             temperature=0.3
         )
@@ -73,20 +98,28 @@ async def analyze_resumes(
         latency = time.time() - start_time
 
         raw = response.choices[0].message.content.strip()
-        raw = raw.replace("```json", "").replace("```", "").strip()
+
+        raw = raw.replace(
+            "```json", ""
+        ).replace(
+            "```", ""
+        ).strip()
 
         try:
             result = json.loads(raw)
             original_result = result.copy()
+
         except Exception:
+
             results.append({
                 "candidate": file.filename,
                 "error": "LLM did not return valid JSON",
                 "raw_output": raw
             })
+
             continue
 
-        #Skill Score
+        # Skill Score
         matched = result.get("matched_skills", [])
         missing = result.get("missing_skills", [])
 
@@ -99,11 +132,15 @@ async def analyze_resumes(
 
         # Semantic Similarity
         chunk_vecs = embed_text(chunks)
+
         resume_vec = chunk_vecs.mean(axis=0)
 
-        semantic_score = cosine_similarity(resume_vec, jd_vec) * 100
+        semantic_score = cosine_similarity(
+            resume_vec,
+            jd_vec
+        ) * 100
 
-        #LLM Score
+        # LLM Score
         llm_score = result.get("llm_score", 50)
 
         # Hybrid Score
@@ -114,6 +151,7 @@ async def analyze_resumes(
         )
 
         final_score = round(final_score)
+
         if final_score >= 80:
             decision = "Selected"
         elif final_score >= 60:
@@ -154,11 +192,70 @@ async def analyze_resumes(
             "analysis": result
         })
 
-    #Ranking
-    valid_results = [r for r in results if "score" in r]
+    # Ranking
+    valid_results = [
+        r for r in results if "score" in r
+    ]
 
-    ranked_results = sorted(valid_results, key=lambda x: x["score"], reverse=True)
+    ranked_results = sorted(
+        valid_results,
+        key=lambda x: x["score"],
+        reverse=True
+    )
 
     return {
         "ranking": ranked_results
     }
+
+
+#  Dual Copilot Endpoint
+
+@app.post("/copilot")
+async def copilot(query: dict):
+
+    try:
+
+        user_query = query.get("query", "")
+        context = query.get("context", "")
+        copilot_type = query.get("type", "")
+
+        if copilot_type == "recruiter":
+
+            prompt = RECRUITER_COPILOT_PROMPT.format(
+                query=user_query,
+                context=context
+            )
+
+        else:
+
+            prompt = CANDIDATE_COPILOT_PROMPT.format(
+                query=user_query,
+                context=context
+            )
+
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Be helpful, accurate and concise."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.4
+        )
+
+        answer = response.choices[0].message.content
+
+        return {
+            "answer": answer
+        }
+
+    except Exception:
+
+        return {
+            "answer": "Copilot temporarily unavailable."
+        }
