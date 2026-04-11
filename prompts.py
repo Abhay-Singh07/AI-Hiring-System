@@ -44,7 +44,7 @@ Evaluation Requirements:
 
 Return JSON in this exact format:
 
-{
+{{}
   "llm_score": number,
   "matched_skills": [],
   "missing_skills": [],
@@ -53,7 +53,7 @@ Return JSON in this exact format:
   "selection_decision": "",
   "decision_reasoning": [],
   "reasoning": []
-}
+}}
 """
 
 
