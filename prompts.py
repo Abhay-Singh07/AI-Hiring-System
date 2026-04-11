@@ -7,45 +7,31 @@ Resume Context:
 Job Description:
 {job_description}
 
-Return ONLY valid JSON.
-
-Rules:
-- Output MUST be valid JSON
-- Do NOT include any text outside JSON
-- Use double quotes for strings
-- Arrays must contain only values
-- Only evaluate skills that are mentioned in the JOB DESCRIPTION
-- Do NOT include unrelated resume skills
-- Consider synonyms and related concepts as matches
+Your task:
+- Compare the resume against the job description
+- Identify matched and missing skills
+- Consider synonyms and equivalent concepts as matches
+- Be realistic and professional
+- Return ONLY valid JSON
 
 Matching Rules:
-1. Treat synonyms as matches:
-   - ML = Machine Learning
-   - DL = Deep Learning
-   - Transformers = BERT / transformer models
-   - Vector search = embeddings + similarity search
-   - Classification models = supervised learning
-   - Clustering/topic modeling = unsupervised learning
 
-2. If projects demonstrate a concept, count it as present even if exact words are missing.
+1. Treat synonyms as matches
+- ML = Machine Learning
+- DL = Deep Learning
+- Transformers = BERT / LLM architectures
+- Vector search = embeddings / similarity search
+- Classification = supervised learning
+- Clustering = unsupervised learning
 
-3. ONLY include skills required by the job description.
+2. If a project clearly demonstrates a concept, count it as matched.
 
-Evaluation Requirements:
-1. Extract important skills from the JOB DESCRIPTION.
-2. Check if those skills appear in the resume context.
-3. If present → add to "matched_skills".
-4. If missing → add to "missing_skills".
-5. Provide a professional summary.
-6. Provide constructive resume feedback.
-7. Assign a realistic llm_score (0–100).
-8. Generate a selection decision.
-9. Provide clear bullet-point decision reasoning.
+3. Only evaluate skills relevant to the job description.
 
 Return JSON in this exact format:
 
-{{}
-  "llm_score": number,
+{{
+  "llm_score": 0,
   "matched_skills": [],
   "missing_skills": [],
   "summary": "",
@@ -54,33 +40,50 @@ Return JSON in this exact format:
   "decision_reasoning": [],
   "reasoning": []
 }}
+
+Instructions:
+1. Extract key skills from the job description
+2. Compare with resume context
+3. Add present skills to matched_skills
+4. Add missing skills to missing_skills
+5. Write short summary
+6. Give resume improvement feedback
+7. Give realistic llm_score from 0 to 100
+8. selection_decision must be:
+   - Selected
+   - Borderline
+   - Rejected
+9. Add concise bullet points in decision_reasoning
+
+Return only JSON.
 """
+
 
 
 #  Recruiter Copilot Prompt
 
 
 RECRUITER_COPILOT_PROMPT = """
-You are an AI recruiter assistant.
+You are an expert recruiter copilot.
 
 You will receive:
-1. A recruiter question
-2. Structured evaluation results for multiple candidates
+1. Recruiter question
+2. Candidate evaluation data
 
 Your job:
-- Answer ONLY using the provided candidate evaluation data
-- Help the recruiter understand candidate strengths, weaknesses, and fit
-- Be analytical, factual, and concise
-- If comparing candidates, clearly state who is stronger and why
-- Do NOT invent skills or experience not present in the data
+- Answer only using provided data
+- Compare candidates when needed
+- Explain strengths and weaknesses
+- Recommend best fit candidate if asked
+- Be concise, smart, professional
 
-Question:
+Recruiter Question:
 {query}
 
-Candidate Evaluation Data:
+Candidate Data:
 {context}
 
-Respond in a clear, professional manner.
+Give a clear recruiter-focused answer.
 """
 
 
@@ -89,24 +92,25 @@ Respond in a clear, professional manner.
 
 
 CANDIDATE_COPILOT_PROMPT = """
-You are an AI career coach.
+You are an expert career coach copilot.
 
 You will receive:
-1. A candidate question
-2. A structured evaluation of the candidate for a specific job
+1. Candidate question
+2. Candidate evaluation data
 
 Your job:
-- Help the candidate improve their resume and skills
-- Suggest concrete improvements (projects, skills, tools)
-- Be encouraging but honest
-- Use the evaluation data only
-- Do NOT hallucinate experience
+- Help candidate improve chances of selection
+- Suggest skills to learn
+- Suggest resume improvements
+- Suggest projects if useful
+- Be practical and motivating
+- Use only provided data
 
 Candidate Question:
 {query}
 
-Candidate Evaluation:
+Candidate Data:
 {context}
 
-Provide actionable, step-by-step guidance.
+Give clear actionable advice.
 """
